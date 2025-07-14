@@ -1,0 +1,147 @@
+﻿<Window x:Class="KhokharumLaa.ProjectorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:KhokharumLaa"
+        xmlns:vm="clr-namespace:KhokharumLaa.ViewModels"
+        xmlns:conv="clr-namespace:KhokharumLaa.Converters"
+        mc:Ignorable="d"
+        Title="Projector"
+        Icon="/khokIcon.png"
+        WindowStyle="None"
+        WindowState="Maximized"
+        d:DataContext="{d:DesignInstance Type=vm:ProjectorViewModel, IsDesignTimeCreatable=True}">
+
+    <Window.Resources>
+        <conv:InvertedBooleanToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter"/>
+
+        <Storyboard x:Key="FadeInProjectorContent">
+            <DoubleAnimation Storyboard.TargetName="SplashGrid" Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.5" BeginTime="0:0:9.5" />
+            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="SplashGrid" Storyboard.TargetProperty="Visibility">
+                <DiscreteObjectKeyFrame KeyTime="0:0:10" Value="{x:Static Visibility.Collapsed}"/>
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="MainContentGrid" Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.5" BeginTime="0:0:10" />
+        </Storyboard>
+
+        <Style x:Key="ColoredProgressBar" TargetType="ProgressBar">
+            <Setter Property="Foreground" Value="#FF00AAFF"/>
+            <Setter Property="Background" Value="#E5E5E5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="2"/>
+                            <Rectangle Name="PART_Indicator" HorizontalAlignment="Left" Fill="{TemplateBinding Foreground}"/>
+                            <Grid x:Name="Animation" ClipToBounds="True" Visibility="Collapsed">
+                                <Rectangle Fill="{TemplateBinding Foreground}" Width="20">
+                                    <Rectangle.RenderTransform>
+                                        <TranslateTransform X="-20" Y="0"/>
+                                    </Rectangle.RenderTransform>
+                                    <Rectangle.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="-20" To="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Grid}}" Duration="0:0:1.5"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Rectangle.Triggers>
+                                </Rectangle>
+                            </Grid>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsIndeterminate" Value="True">
+                                <Setter TargetName="Animation" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="PART_Indicator" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard Storyboard="{StaticResource FadeInProjectorContent}"/>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Grid Background="{Binding BackgroundBrush}">
+        <!-- Main Content Grid (Fades in) -->
+        <Grid x:Name="MainContentGrid" Opacity="0">
+
+            <!-- Grid to wrap both video players -->
+            <Grid>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsVideoVisible}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <!-- The MediaOpened event is  handled in code-->
+                <MediaElement Name="VideoPlayerA" Stretch="UniformToFill" IsMuted="True" UnloadedBehavior="Stop" LoadedBehavior="Manual"/>
+                <MediaElement Name="VideoPlayerB" Stretch="UniformToFill" IsMuted="True" UnloadedBehavior="Stop" LoadedBehavior="Manual" Opacity="0"/>
+            </Grid>
+
+            <!-- Grid for "Blank Screen" functionality -->
+            <Grid Visibility="{Binding IsScreenBlack, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                <Image Source="{Binding ImageSource}" Stretch="Uniform">
+                    <Image.Style>
+                        <Style TargetType="Image">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsShowingImage}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Image.Style>
+                </Image>
+                <TextBlock Text="{Binding LiveContent}"
+                           Foreground="{Binding ForegroundBrush}"
+                           Visibility="{Binding IsShowingImage, Converter={StaticResource InvertedBoolToVisibilityConverter}}"
+                           FontFamily="{Binding FontFamily}"
+                           FontSize="{Binding FontSize}"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           TextAlignment="Center"
+                           Margin="50"/>
+            </Grid>
+        </Grid>
+
+        <!-- Splash Screen Grid (Fades out) -->
+        <Grid x:Name="SplashGrid" Background="White">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Khokharum Laa [For Projector]" FontSize="48" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#1d3557"/>
+                <TextBlock Text="Version 1.0.0" FontSize="18" Foreground="#457b9d" HorizontalAlignment="Center" Margin="0,5,0,30"/>
+                <ProgressBar IsIndeterminate="True" Height="5" Margin="40, 20" Width="200" Style="{StaticResource ColoredProgressBar}"/>
+                <TextBlock Text="Developed and Designed with ❤️ by Vinos Ronra Shimray" FontSize="28" FontWeight="SemiBold" Foreground="#386641" HorizontalAlignment="Center" Margin="0,80,0,0"/>
+                <TextBlock Text="©2024. All Rights Reserved." FontSize="16" Foreground="#606060" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+                    <TextBlock FontSize="20">
+                        This software is offered free of charge by the Developer. If you enjoy using this application, feel free to explore<LineBreak/>
+other programs created by the same developer, such as the <Bold><Italic>Church Management System,</Italic></Bold>specifically designed<LineBreak/>
+ to meet the needs and context of <Bold>Tangkhul Churches</Bold>. Your support and donations are greatly appreciated  <LineBreak/>
+ and will help enhance features and improvements. For inquiries or feedback, please contact the developer at:<LineBreak/>
+                &#x2003;&#x2003;&#x2003;<Bold>Email:</Bold> vinosshimray@gmail.com<LineBreak/>
+                &#x2003;&#x2003;&#x2003;<Bold>Phone:</Bold> +91 8248213909<LineBreak/>
+                &#x2003;&#x2003;&#x2003;<Hyperlink NavigateUri="https://www.vinosshimray@github.io" RequestNavigate="Hyperlink_RequestNavigate">
+                                   Click here to visit the developer's website for more information.
+                        </Hyperlink>
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
